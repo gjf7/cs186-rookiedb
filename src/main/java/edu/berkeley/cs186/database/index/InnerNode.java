@@ -108,6 +108,12 @@ class InnerNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
+        // find the right childNode, and put in it
+        // check if node are split
+        // if no, we are done
+        //    1. insert split_key to this innerNode, also handle right page num in children
+        //    2. what about this innerNode full too?
+        //    3. split and return
 
         return Optional.empty();
     }
