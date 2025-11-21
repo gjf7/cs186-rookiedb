@@ -152,7 +152,47 @@ class InnerNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
             float fillFactor) {
-        // TODO(proj2): implement
+        int d = metadata.getOrder();
+
+        while (data.hasNext()) {
+            BPlusNode leafNode = getChild(children.size() - 1);
+            Optional<Pair<DataBox, Long>> pair = leafNode.bulkLoad(data, fillFactor);
+
+            if (!pair.isPresent()) {
+                return Optional.empty();
+            }
+
+            Pair<DataBox, Long> p = pair.get();
+            DataBox split_key = p.getFirst();
+            Long right_node_page_num = p.getSecond();
+            keys.add(split_key);
+            children.add(right_node_page_num);
+
+            if (keys.size() > 2 * d) {
+                ArrayList<DataBox> right_node_keys = new ArrayList<>();
+                ArrayList<Long> right_node_children = new ArrayList<>();
+
+                // the first d entries are kept in the left node
+                // and the last d entries are moved to the right node.
+                for (int i = d; i > 0; i--) {
+                    right_node_keys.add(0, keys.remove(keys.size() - 1));
+                }
+                for (int i = d + 1; i > 0; i--) {
+                    right_node_children.add(0, children.remove(children.size() - 1));
+                }
+                // The middle entry is moved (not copied) up as the split key.
+                DataBox new_split_key = keys.remove(d);
+
+                sync();
+
+                InnerNode right_node = new InnerNode(metadata, bufferManager, right_node_keys, right_node_children, treeContext);
+                Long new_right_node_page_num = right_node.getPage().getPageNum();
+                return Optional.of(new Pair<>(new_split_key, new_right_node_page_num));
+            } else {
+                sync();
+            }
+        }
+
 
         return Optional.empty();
     }
