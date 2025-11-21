@@ -177,9 +177,9 @@ class LeafNode extends BPlusNode {
             }
 
             DataBox split_key = right_node_keys.get(0);
-            LeafNode right_node = new LeafNode(metadata,bufferManager, right_node_keys, right_node_rids, Optional.empty(), treeContext);
+            LeafNode right_node = new LeafNode(metadata,bufferManager, right_node_keys, right_node_rids, rightSibling, treeContext);
             long right_node_page_num = right_node.page.getPageNum();
-            this.rightSibling = Optional.of(right_node_page_num);
+            rightSibling = Optional.of(right_node_page_num);
             sync();
             return Optional.of(new Pair<>(split_key, right_node_page_num));
         } else {
