@@ -158,9 +158,34 @@ class LeafNode extends BPlusNode {
     // See BPlusNode.put.
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
-        // TODO(proj2): implement
+        if (keys.contains(key)) {
+            throw new BPlusTreeException("Key already exists");
+        }
 
-        return Optional.empty();
+        int index = InnerNode.numLessThan(key, keys);
+        keys.add(index, key);
+        rids.add(index, rid);
+
+        int d = metadata.getOrder();
+        if (keys.size() > 2 * d) {
+            // split
+            ArrayList<DataBox> right_node_keys = new ArrayList<>();
+            ArrayList<RecordId> right_node_rids = new ArrayList<>();
+            for (int i = d + 1; i > 0; i--) {
+                right_node_keys.add(0, keys.remove(keys.size() - 1));
+                right_node_rids.add(0, rids.remove(rids.size() - 1));
+            }
+
+            DataBox split_key = right_node_keys.get(0);
+            LeafNode right_node = new LeafNode(metadata,bufferManager, right_node_keys, right_node_rids, Optional.empty(), treeContext);
+            long right_node_page_num = right_node.page.getPageNum();
+            this.rightSibling = Optional.of(right_node_page_num);
+            sync();
+            return Optional.of(new Pair<>(split_key, right_node_page_num));
+        } else {
+            sync();
+            return Optional.empty();
+        }
     }
 
     // See BPlusNode.bulkLoad.
@@ -175,9 +200,12 @@ class LeafNode extends BPlusNode {
     // See BPlusNode.remove.
     @Override
     public void remove(DataBox key) {
-        // TODO(proj2): implement
-
-        return;
+        int index = keys.indexOf(key);
+        if (index >= 0) {
+            keys.remove(index);
+            rids.remove(index);
+            sync();
+        }
     }
 
     // Iterators ///////////////////////////////////////////////////////////////

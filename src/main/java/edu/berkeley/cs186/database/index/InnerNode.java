@@ -107,14 +107,44 @@ class InnerNode extends BPlusNode {
     // See BPlusNode.put.
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
-        // TODO(proj2): implement
-        // find the right childNode, and put in it
-        // check if node are split
-        // if no, we are done
-        //    1. insert split_key to this innerNode, also handle right page num in children
-        //    2. what about this innerNode full too?
-        //    3. split and return
+        int childIndex = numLessThanEqual(key, keys);
+        BPlusNode childNode = getChild(childIndex);
+        Optional<Pair<DataBox, Long>> pair = childNode.put(key, rid);
 
+        if (!pair.isPresent()) {
+            return Optional.empty();
+        }
+
+        Pair<DataBox, Long> p = pair.get();
+        DataBox split_key = p.getFirst();
+        Long right_node_page_num = p.getSecond();
+        int index = numLessThan(split_key, keys);
+        keys.add(index, split_key);
+        children.add(index + 1, right_node_page_num);
+        int d = metadata.getOrder();
+        if (keys.size() > 2 * d) {
+            ArrayList<DataBox> right_node_keys = new ArrayList<>();
+            ArrayList<Long> right_node_children = new ArrayList<>();
+
+            // the first d entries are kept in the left node
+            // and the last d entries are moved to the right node.
+            for (int i = d; i > 0; i--) {
+                right_node_keys.add(0, keys.remove(keys.size() - 1));
+            }
+            for (int i = d + 1; i > 0; i--) {
+                right_node_children.add(0, children.remove(children.size() - 1));
+            }
+            // The middle entry is moved (not copied) up as the split key.
+            DataBox new_split_key = keys.remove(d);
+
+            sync();
+
+            InnerNode right_node = new InnerNode(metadata, bufferManager, right_node_keys, right_node_children, treeContext);
+            Long new_right_node_page_num = right_node.getPage().getPageNum();
+            return Optional.of(new Pair<>(new_split_key, new_right_node_page_num));
+        } else {
+            sync();
+        }
         return Optional.empty();
     }
 
@@ -130,9 +160,8 @@ class InnerNode extends BPlusNode {
     // See BPlusNode.remove.
     @Override
     public void remove(DataBox key) {
-        // TODO(proj2): implement
-
-        return;
+        LeafNode leafNode = get(key);
+        leafNode.remove(key);
     }
 
     // Helpers /////////////////////////////////////////////////////////////////
