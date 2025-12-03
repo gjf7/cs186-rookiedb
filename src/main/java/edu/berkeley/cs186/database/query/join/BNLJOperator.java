@@ -123,24 +123,25 @@ public class BNLJOperator extends JoinOperator {
                 return null;
             }
             while (true) {
-                if (rightSourceIterator.hasNext()) {
-                    if (rightPageIterator.hasNext()) {
-                        // there's a next right record, join it if there's a match
-                        Record rightRecord = rightPageIterator.next();
-                        if (compare(leftRecord, rightRecord) == 0) {
-                            return leftRecord.concat(rightRecord);
-                        }
-                    } else {
-                        fetchNextRightPage();
+                if (rightPageIterator.hasNext()) {
+                    // there's a next right record, join it if there's a match
+                    Record rightRecord = rightPageIterator.next();
+                    if (compare(leftRecord, rightRecord) == 0) {
+                        return leftRecord.concat(rightRecord);
                     }
-                } else if (leftSourceIterator.hasNext()) {
-                    if (leftBlockIterator.hasNext()) {
+                }
+                else if (rightSourceIterator.hasNext()) {
+                    fetchNextRightPage();
+                }
+                else if (leftBlockIterator.hasNext()) {
                         this.leftRecord = leftBlockIterator.next();
                         rightSourceIterator.reset();
-                    } else {
-                        fetchNextLeftBlock();
-                    }
-                } else {
+                }
+                else if (leftSourceIterator.hasNext()) {
+                    fetchNextLeftBlock();
+                    rightSourceIterator.reset();
+                }
+                else {
                     // if you're here then there are no more records to fetch
                     return null;
                 }
