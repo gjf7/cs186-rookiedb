@@ -89,6 +89,7 @@ public class BNLJOperator extends JoinOperator {
         private void fetchNextLeftBlock() {
             if (leftSourceIterator.hasNext()) {
                 leftBlockIterator = getBlockIterator(leftSourceIterator, getLeftSource().getSchema(), numBuffers - 2);
+                leftBlockIterator.markNext();
                 this.leftRecord = leftBlockIterator.next();
             }
         }
@@ -107,6 +108,7 @@ public class BNLJOperator extends JoinOperator {
         private void fetchNextRightPage() {
             if (rightSourceIterator.hasNext()) {
                 rightPageIterator = getBlockIterator(rightSourceIterator, getRightSource().getSchema(), 1);
+                rightPageIterator.markNext();
             }
         }
 
@@ -130,16 +132,19 @@ public class BNLJOperator extends JoinOperator {
                         return leftRecord.concat(rightRecord);
                     }
                 }
+                else if (leftBlockIterator.hasNext()) {
+                    this.leftRecord = leftBlockIterator.next();
+                    rightPageIterator.reset();
+                }
                 else if (rightSourceIterator.hasNext()) {
                     fetchNextRightPage();
-                }
-                else if (leftBlockIterator.hasNext()) {
-                        this.leftRecord = leftBlockIterator.next();
-                        rightSourceIterator.reset();
+                    leftBlockIterator.reset();
+                    this.leftRecord = leftBlockIterator.next();
                 }
                 else if (leftSourceIterator.hasNext()) {
                     fetchNextLeftBlock();
                     rightSourceIterator.reset();
+                    fetchNextRightPage();
                 }
                 else {
                     // if you're here then there are no more records to fetch
