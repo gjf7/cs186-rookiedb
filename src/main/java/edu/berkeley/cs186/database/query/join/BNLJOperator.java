@@ -87,7 +87,10 @@ public class BNLJOperator extends JoinOperator {
          * Make sure you pass in the correct schema to this method.
          */
         private void fetchNextLeftBlock() {
-            // TODO(proj3_part1): implement
+            if (leftSourceIterator.hasNext()) {
+                leftBlockIterator = getBlockIterator(leftSourceIterator, getLeftSource().getSchema(), numBuffers - 2);
+                this.leftRecord = leftBlockIterator.next();
+            }
         }
 
         /**
@@ -102,7 +105,9 @@ public class BNLJOperator extends JoinOperator {
          * Make sure you pass in the correct schema to this method.
          */
         private void fetchNextRightPage() {
-            // TODO(proj3_part1): implement
+            if (rightSourceIterator.hasNext()) {
+                rightPageIterator = getBlockIterator(rightSourceIterator, getRightSource().getSchema(), 1);
+            }
         }
 
         /**
@@ -114,8 +119,32 @@ public class BNLJOperator extends JoinOperator {
          * of JoinOperator).
          */
         private Record fetchNextRecord() {
-            // TODO(proj3_part1): implement
-            return null;
+            if (leftRecord == null) {
+                return null;
+            }
+            while (true) {
+                if (rightSourceIterator.hasNext()) {
+                    if (rightPageIterator.hasNext()) {
+                        // there's a next right record, join it if there's a match
+                        Record rightRecord = rightPageIterator.next();
+                        if (compare(leftRecord, rightRecord) == 0) {
+                            return leftRecord.concat(rightRecord);
+                        }
+                    } else {
+                        fetchNextRightPage();
+                    }
+                } else if (leftSourceIterator.hasNext()) {
+                    if (leftBlockIterator.hasNext()) {
+                        this.leftRecord = leftBlockIterator.next();
+                        rightSourceIterator.reset();
+                    } else {
+                        fetchNextLeftBlock();
+                    }
+                } else {
+                    // if you're here then there are no more records to fetch
+                    return null;
+                }
+            }
         }
 
         /**
