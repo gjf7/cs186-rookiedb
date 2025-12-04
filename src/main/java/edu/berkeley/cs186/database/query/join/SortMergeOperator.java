@@ -139,7 +139,49 @@ public class SortMergeOperator extends JoinOperator {
          * or null if there are no more records to join.
          */
         private Record fetchNextRecord() {
-            // TODO(proj3_part1): implement
+            while (leftRecord != null && rightRecord != null) {
+                if (!marked) {
+                    while (compare(leftRecord, rightRecord) < 0) {
+                        if (leftIterator.hasNext()) {
+                            leftRecord = leftIterator.next();
+                        } else {
+                            return null;
+                        }
+                    }
+
+                    while (compare(leftRecord, rightRecord) > 0) {
+                        if (rightIterator.hasNext()) {
+                            rightRecord = rightIterator.next();
+                        } else {
+                            return null;
+                        }
+                    }
+
+                    rightIterator.markPrev();
+                    marked = true;
+                }
+
+                if (compare(leftRecord, rightRecord) == 0) {
+                    Record result = leftRecord.concat(rightRecord);
+                    if (rightIterator.hasNext()) {
+                        rightRecord  = rightIterator.next();
+                    } else {
+                        rightIterator.reset();
+                        rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+                        leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
+                    }
+                    return result;
+                } else {
+                    rightIterator.reset();
+                    rightRecord = rightIterator.next();
+                    if (leftIterator.hasNext()) {
+                        leftRecord = leftIterator.next();
+                    } else {
+                        return null;
+                    }
+                    marked = false;
+                }
+            }
             return null;
         }
 
