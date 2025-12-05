@@ -145,6 +145,7 @@ public class SortMergeOperator extends JoinOperator {
                         if (leftIterator.hasNext()) {
                             leftRecord = leftIterator.next();
                         } else {
+                            leftRecord = null;
                             return null;
                         }
                     }
@@ -153,6 +154,7 @@ public class SortMergeOperator extends JoinOperator {
                         if (rightIterator.hasNext()) {
                             rightRecord = rightIterator.next();
                         } else {
+                            rightRecord = null;
                             return null;
                         }
                     }
@@ -177,6 +179,7 @@ public class SortMergeOperator extends JoinOperator {
                     if (leftIterator.hasNext()) {
                         leftRecord = leftIterator.next();
                     } else {
+                        leftRecord = null;
                         return null;
                     }
                     marked = false;

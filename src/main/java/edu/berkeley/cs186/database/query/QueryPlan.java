@@ -643,23 +643,49 @@ public class QueryPlan {
             Map<Set<String>, QueryOperator> prevMap,
             Map<Set<String>, QueryOperator> pass1Map) {
         Map<Set<String>, QueryOperator> result = new HashMap<>();
-        // TODO(proj3_part2): implement
-        // We provide a basic description of the logic you have to implement:
-        // For each set of tables in prevMap
-        //   For each join predicate listed in this.joinPredicates
-        //      Get the left side and the right side of the predicate (table name and column)
-        //
-        //      Case 1: The set contains left table but not right, use pass1Map
-        //              to fetch an operator to access the rightTable
-        //      Case 2: The set contains right table but not left, use pass1Map
-        //              to fetch an operator to access the leftTable.
-        //      Case 3: Otherwise, skip this join predicate and continue the loop.
-        //
-        //      Using the operator from Case 1 or 2, use minCostJoinType to
-        //      calculate the cheapest join with the new table (the one you
-        //      fetched an operator for from pass1Map) and the previously joined
-        //      tables. Then, update the result map if needed.
+        for (Map.Entry<Set<String>, QueryOperator> entry : prevMap.entrySet()) {
+            Set<String> tables = entry.getKey();
+            QueryOperator prevOp = entry.getValue();
+
+            for (JoinPredicate joinPredicate : this.joinPredicates) {
+                String leftTable = joinPredicate.leftTable;
+                String leftColumn = joinPredicate.leftColumn;
+                String rightTable = joinPredicate.rightTable;
+                String rightColumn = joinPredicate.rightColumn;
+
+                QueryOperator leftOp;
+                QueryOperator rightOp;
+                Set<String> newTables = new HashSet<>(tables);
+
+                if (tables.contains(leftTable) && !tables.contains(rightTable)) {
+                    leftOp = prevOp;
+                    rightOp = fetchOperatorFromPass1Map(pass1Map, rightTable);
+                    newTables.add(rightTable);
+                } else if (tables.contains(rightTable) && !tables.contains(leftTable)) {
+                    leftOp = fetchOperatorFromPass1Map(pass1Map, leftTable);
+                    rightOp = prevOp;
+                    newTables.add(leftTable);
+                } else {
+                    continue;
+                }
+
+                QueryOperator joinType = minCostJoinType(leftOp, rightOp, leftColumn, rightColumn);
+                result.put(newTables, joinType);
+            }
+        }
+
         return result;
+    }
+
+    private QueryOperator fetchOperatorFromPass1Map(Map<Set<String>, QueryOperator> pass1Map, String table) {
+        for(Map.Entry<Set<String>, QueryOperator> entry : pass1Map.entrySet()) {
+            Set<String> key = entry.getKey();
+            QueryOperator value = entry.getValue();
+            if (key.contains(table)) {
+                return value;
+            }
+        }
+        return null;
     }
 
     // Task 7: Optimal Plan Selection //////////////////////////////////////////
@@ -696,19 +722,34 @@ public class QueryPlan {
      */
     public Iterator<Record> execute() {
         this.transaction.setAliasMap(this.aliases);
-        // TODO(proj3_part2): implement
         // Pass 1: For each table, find the lowest cost QueryOperator to access
         // the table. Construct a mapping of each table name to its lowest cost
         // operator.
+        Map<Set<String>, QueryOperator> pass1Map = new HashMap<>();
+        for (String table : tableNames) {
+            Set<String> set = new HashSet<>();
+            set.add(table);
+            pass1Map.put(set, minCostSingleAccess(table));
+        }
         //
         // Pass i: On each pass, use the results from the previous pass to find
         // the lowest cost joins with each table from pass 1. Repeat until all
         // tables have been joined.
+        Map<Set<String>, QueryOperator> prevMap = pass1Map;
+        for (int i = 0; i < tableNames.size() - 1; i++) {
+            prevMap = minCostJoins(prevMap, pass1Map);
+        }
         //
         // Set the final operator to the lowest cost operator from the last
         // pass, add group by, project, sort and limit operators, and return an
         // iterator over the final operator.
-        return this.executeNaive(); // TODO(proj3_part2): Replace this!
+        this.finalOperator = minCostOperator(prevMap);
+        this.addGroupBy();
+        this.addProject();
+        this.addSort();
+        this.addLimit();
+
+        return finalOperator.iterator();
     }
 
     // EXECUTE NAIVE ///////////////////////////////////////////////////////////
