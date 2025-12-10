@@ -11,6 +11,36 @@ public enum LockType {
     SIX, // shared intention exclusive
     NL;  // no lock held
 
+    private static final boolean[][] COMPATIBLE_MATRIX = {
+        //  S      X      IS     IX    SIX     NL
+        {true,  false, true,  false, false, true},  // S
+        {false, false, false, false, false, true},  // X
+        {true,  false, true,  true,  true,  true},  // IS
+        {false, false, true,  true,  false, true},  // IX
+        {false, false, true,  false, false, true},  // SIX
+        {true,  true,  true,  true,  true,  true}   // NL
+    };
+
+    private static final boolean[][] PARENT_MATRIX = {
+        //  S      X      IS     IX    SIX     NL
+        {false, false, false, false, false, true},  // S
+        {false, false, false, false, false, true},  // X
+        {true,  false, true,  false, false, true},  // IS
+        {true,  true,  true,  true,  true,  true},  // IX
+        {false, false, false, false, false, true},  // SIX
+        {false, false, false, false, false, true}   // NL
+    };
+
+    private static final boolean[][] SUBSTITUTABLE_MATRIX = {
+        //  S      X      IS     IX    SIX     NL
+        {true,  false, false, false, false, true},  // S
+        {true,  true,  true,  true,  true,  true},  // X
+        {false, false, true,  false, false, true},  // IS
+        {false, false, true,  true,  false, true},  // IX
+        {true,  false, true,  true,  true,  true},  // SIX
+        {false, false, false, false, false, true}   // NL
+    };
+
     /**
      * This method checks whether lock types A and B are compatible with
      * each other. If a transaction can hold lock type A on a resource
@@ -21,9 +51,7 @@ public enum LockType {
         if (a == null || b == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-
-        return false;
+        return COMPATIBLE_MATRIX[a.ordinal()][b.ordinal()];
     }
 
     /**
@@ -53,9 +81,7 @@ public enum LockType {
         if (parentLockType == null || childLockType == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-
-        return false;
+        return PARENT_MATRIX[parentLockType.ordinal()][childLockType.ordinal()];
     }
 
     /**
@@ -68,9 +94,7 @@ public enum LockType {
         if (required == null || substitute == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-
-        return false;
+        return SUBSTITUTABLE_MATRIX[substitute.ordinal()][required.ordinal()];
     }
 
     /**
@@ -93,4 +117,3 @@ public enum LockType {
         }
     }
 }
-
